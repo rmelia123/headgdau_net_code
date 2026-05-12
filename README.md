@@ -374,20 +374,6 @@ Download pre-trained weights (5-fold cross-validation):
 
 ---
 
-## Citation
-
-If you use this code or find our work helpful, please cite:
-
-```bibtex
-@article{ren2026headgdau,
-  title={HeadGDAU-Net: A Lightweight Hybrid Network with Group-Dilated-Attention and BiLSTM for Prostate mp-MRI Segmentation},
-  author={Ren, Meili and Huang, Mengxing and Zhang, Yu and Ren, Meiyan and Qiao, Zhenwei},
-  journal={IEEE Access},
-  year={2026},
-  publisher={IEEE}
-}
-```
-
 ---
 
 ## License
