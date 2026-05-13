@@ -61,32 +61,7 @@ headgdau_net_code/
 
 ---
 
-## Installation
 
-### Requirements
-- Python 3.9+
-- PyTorch 1.13.1
-- CUDA 11.7 (for GPU training)
-- 12+ GB GPU memory (NVIDIA A100 40GB recommended, RTX 3060 12GB for clinical deployment)
-
-### Setup
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/HeadGDAU-Net.git
-cd HeadGDAU-Net
-
-# Create conda environment
-conda create -n headgdau python=3.9
-conda activate headgdau
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Or use Docker for bit-for-bit reproducibility
-docker build -t headgdau .
-docker run --gpus all -it -v $(pwd)/data:/data headgdau
-```
 
 ### requirements.txt
 ```
@@ -129,16 +104,6 @@ data/prostate/
 ├── patient_002/
 │   └── ...
 ```
-
-### Preprocessing
-1. **Spatial registration**: Rigid transformation using Elastix toolbox
-2. **Normalization**: Min-max scaling to [0, 1] per modality
-3. **Resizing**: 256x256 via bilinear interpolation
-4. **Quality control**: Inter-observer agreement DSC > 0.90
-
----
-
-## Training
 
 ### Quick Start
 ```bash
@@ -206,38 +171,9 @@ Access at `http://localhost:6006` to view:
 
 ---
 
-## Inference
 
-### Single Slice
-```bash
-python inference.py \
-    --model ./checkpoints/fold_0/best_model.pth \
-    --input ./data/prostate/patient_001/t2wi/slice_010.png \
-    --output ./results \
-    --mode single
-```
 
-### Complete Volume
-```bash
-python inference.py \
-    --model ./checkpoints/fold_0/best_model.pth \
-    --input ./data/prostate/patient_001 \
-    --output ./results/patient_001 \
-    --mode volume
-```
 
-### Speed Benchmark
-```bash
-python inference.py \
-    --model ./checkpoints/fold_0/best_model.pth \
-    --benchmark
-```
-
-Expected performance on NVIDIA A100:
-- **68.7 slices/second** (batch_size=1)
-- **<0.6 seconds** for 40-slice prostate MRI
-
----
 
 ## Evaluation
 
@@ -274,33 +210,8 @@ headnet = HeadNet(
 )
 ```
 
-### GDA Block (Group-Dilated-Attention)
-```python
-from model import GDABlock
 
-gda_block = GDABlock(
-    in_channels=64,
-    out_channels=128,
-    groups=8,            # Grid search optimal (Section 3.2.3)
-    num_heads=4,         # 4 attention heads
-    window_size=7,       # 7x7 windows
-    dilation_rates=(1, 2, 3)  # Multi-scale receptive fields
-)
-```
 
-### sFDloss (Shape-Sensitive Fourier Descriptor Loss)
-```python
-from sfd_loss import HybridLoss
-
-loss_fn = HybridLoss(
-    omega1=0.4,          # HeadNet weight (ablation optimal)
-    omega2=0.6,          # GDAU-Net weight
-    sfd_k=32,            # Retained Fourier coefficients
-    sfd_beta=10.0        # Sigmoid steepness
-)
-```
-
----
 
 ## Reproducibility
 
@@ -333,81 +244,6 @@ docker build -t headgdau .
 docker run --gpus all -v $(pwd)/data:/data -v $(pwd)/output:/output headgdau
 ```
 
----
 
-## Pre-trained Weights
 
-Download pre-trained weights (5-fold cross-validation):
 
-| Fold | DSC | HD95 (mm) | AUC-ROC | Download |
-|------|-----|-----------|---------|----------|
-| Fold 0 | 89.45+/-0.82 | 3.21+/-0.24 | 92.78+/-0.91 | [weights](link) |
-| Fold 1 | 89.18+/-0.88 | 3.31+/-0.26 | 92.65+/-0.97 | [weights](link) |
-| Fold 2 | 89.35+/-0.85 | 3.25+/-0.25 | 92.71+/-0.93 | [weights](link) |
-| Fold 3 | 89.12+/-0.90 | 3.35+/-0.28 | 92.58+/-1.02 | [weights](link) |
-| Fold 4 | 89.01+/-0.92 | 3.38+/-0.29 | 92.52+/-1.05 | [weights](link) |
-| **Mean** | **89.22+/-0.85** | **3.27+/-0.25** | **92.69+/-0.95** | -- |
-
----
-
-## Results
-
-### Proprietary Dataset (248 patients)
-
-| Model | Params (M) | FLOPs (G) | DSC (%) | HD95 (mm) | AUC-ROC (%) |
-|-------|-----------|-----------|---------|-----------|-------------|
-| U-Net | 32.08 | 18.25 | 80.67+/-1.36 | 6.82+/-0.53 | 87.31+/-1.06 |
-| AttU-Net | 42.35 | 25.63 | 86.15+/-1.49 | 4.07+/-0.74 | 92.23+/-1.43 |
-| TransU-Net | 52.31 | 32.87 | 87.43+/-2.03 | 4.12+/-0.52 | 92.15+/-1.72 |
-| SwinUnet | 42.60 | 26.15 | 88.21+/-1.03 | 3.85+/-0.36 | 92.40+/-1.27 |
-| 3DSqU2Net | 35.22 | 20.34 | 89.05+/-1.09 | 3.45+/-0.28 | 92.57+/-1.14 |
-| MA-SAM | 38.76 | 22.68 | 88.92+/-1.17 | 3.62+/-0.31 | 92.53+/-1.19 |
-| **HeadGDAU-Net** | **26.22** | **11.89** | **89.22+/-0.85** | **3.27+/-0.25** | **92.69+/-0.95** |
-
-### Public Datasets
-
-| Dataset | HeadGDAU-Net DSC | Best Baseline DSC | Improvement |
-|---------|-----------------|-------------------|-------------|
-| PROMISE12 | 89.40+/-1.12% | 88.73+/-1.15% (3DSqU2Net) | +0.67% |
-| ProstateX | 88.76+/-1.21% | 87.92+/-1.32% (3DSqU2Net) | +0.84% |
-| PI-CAI | 87.92+/-1.31% | 87.15+/-1.35% (PI-CAI Top-1) | +0.77% |
-
----
-
----
-
-## License
-
-This project is licensed under the MIT License. See LICENSE for details.
-
----
-
-## Acknowledgments
-
-This work was supported by:
-- Key Research and Development Program of Hainan Province (Grant No. ZDYF2021SHFZ243)
-- Regional Project of the National Natural Science Foundation of China (Grant No. 82260362)
-- Hainan Provincial Key Laboratory of Big Data & Smart Service
-- Center of Network and Information Education Technology at Shanxi University of Finance and Economics
-
-We thank all patients who participated in this study and the urologists who contributed to data annotation.
-
----
-
-## Contact
-
-For questions or issues, please:
-- Open an issue on GitHub
-- Contact corresponding author: Meili Ren (renml@sxufe.edu.cn)
-
----
-
-## Changelog
-
-### v1.0.0 (2026-05-12)
-- Initial release
-- Complete model implementation
-- Training and inference scripts
-- Evaluation framework with statistical analysis
-- Pre-trained weights (5-fold cross-validation)
-- Docker environment for reproducibility
